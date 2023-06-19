@@ -1,8 +1,5 @@
 import cv2
 import numpy as np
-from PIL import Image
-from io import BytesIO
-import base64
 from flask import Flask, jsonify, request
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import img_to_array
@@ -15,17 +12,6 @@ labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
 
 # load the face detection classifier
 face_classifier = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-
-def encode_image(image):
-    buffered = BytesIO()
-    image.save(buffered, format="JPEG")
-    jpeg_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
-    return jpeg_base64
-
-def decode_image(jpeg_base64):
-    jpeg = base64.b64decode(jpeg_base64)
-    image = Image.open(BytesIO(jpeg))
-    return image
 
 @app.route('/emotion_detection', methods=['POST'])
 def detect_emotion():
@@ -52,14 +38,8 @@ def detect_emotion():
         preds = model.predict(roi_gray)[0]
         label = labels[preds.argmax()]
 
-        # draw the bounding box and label on the image
-        cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 255), 2)
-        cv2.putText(image, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
-
-    # encode the image as a JPEG and return it along with the detected emotion
-    emotion_image = Image.fromarray(image)
-    jpeg_base64 = encode_image(emotion_image)
-    return jsonify({'emotion': label, 'image': jpeg_base64})
+    # return the detected emotion
+    return jsonify({'emotion': label}), 200, {'Content-Type': 'application/json'}
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    app.run('0.0.0.0', port=5050)
